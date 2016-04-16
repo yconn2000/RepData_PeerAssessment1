@@ -1,25 +1,115 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Class Project 1"
+author: "Ed Yang"
+date: "April 15, 2016"
+output: html_document
 ---
 
 
-## Loading and preprocessing the data
+
+
+## 1. Reading in the dataset and/or processing the data
+
+```{r echo = TRUE}
+
+    activity<-read.csv('./activity.csv')
+    summary(activity)
+    activity$dow <- weekdays(as.Date(activity$date))
+    activity1 <- activity[!is.na(activity$steps),]
+    library(plyr)
+```
+
+## 2. Histogram of the total number of steps taken each day
 
 
 
-## What is mean total number of steps taken per day?
+```{r echo = TRUE} 
+    steptable <- aggregate(activity1$steps ~ activity1$date, FUN=sum )
+    colnames(steptable)<- c("Date", "Steps")
+    hist(steptable$Steps, breaks=8, xlab="Steps", main = "Total Steps per Day")
+```
+
+## 3. What is mean total number of steps taken per day?
+
+```{r echo = TRUE}
+    #Mean steps
+    mean(steptable$Steps)
+    #Median Steps
+    median(steptable$Steps)
+```    
+## 4. What is the average daily activity pattern? 
+
+```{r echo = TRUE}
+    library(plyr)
+    library(ggplot2)
+
+    ##create average number of steps per interval
+    intervals <- ddply(activity1, .(interval), summarize, Avg = mean(steps))
+    
+    ##Create line plot of average number of steps per interval
+    p <- ggplot(intervals, aes(x=interval, y=Avg), xlab = "Interval", ylab="Average Number of Steps")
+    p + geom_line()+xlab("Interval")+ylab("Average Number of Steps")+ggtitle("Average Number of Steps per Interval")
+```
 
 
 
-## What is the average daily activity pattern?
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
+```{r echo = TRUE}
+    maxst <- max(intervals$Avg)
+    intervals[intervals$Avg==maxst,1]
+```
+The maximum number of steps for a 5-minute interval was 206.17 steps.
 
+The 5-minute interval which had the maximum number of steps was the 835 interval.
 
 ## Imputing missing values
 
+Calculate and report the total number of missing values in the dataset 
 
+Devise a strategy for filling in all of the missing values in the dataset. 
 
-## Are there differences in activity patterns between weekdays and weekends?
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.
+
+```{r echo=TRUE}
+    #Number of NAs in original data set
+    activity2<-activity[is.na(activity$steps),]
+    summary(activity2)
+```
+The length of the new table is 2304, so we have 2304 missing data records
+
+```{r echo=TRUE}
+    library(magrittr) 
+    library(dplyr)
+
+    activityt<- activity
+    nas<- is.na(activityt$steps)
+    avg_interval<- tapply(activityt$steps, activityt$interval, mean, na.rm=TRUE, simplify = TRUE)
+    activityt$steps[nas] <- avg_interval[as.character(activityt$interval[nas])]
+
+    Total_Steps2<- activityt%>%
+    group_by(date)%>%
+    summarise(total_steps2 = sum(steps, na.rm=TRUE))
+
+    hist(as.numeric(Total_Steps2$total_steps), breaks=8, xlab="Steps", main = "Total Steps per Day")
+```
+
+## Are there differences in activity patterns between weekdays and weekends
+
+```{r echo=TRUE}
+    
+    library(lattice)
+    activityt$dow1 <- ifelse(activityt$dow %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
+    
+    finaltable <- ddply(activityt, .(interval, dow1), summarize, Avg = mean(steps))
+
+    xyplot(Avg~interval|dow1, data=finaltable, type="l",  layout = c(1,2),
+      main="Average Steps per Interval Based on Type of Day", 
+     ylab="Average Number of Steps", xlab="Interval")
+
+```
+Yes, people do walk more in weekends!!
+
+    
